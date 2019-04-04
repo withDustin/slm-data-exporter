@@ -9,7 +9,7 @@ console.log('\n\n\n\n');
 let header = ['So Phieu Xuat', 'Ngay', 'Ma Khach Hang', 'Ten Khach Hang', 'Ma Hang', 'Ten Hang', 'So Luong', 'Don Gia', 'Thanh Tien', 'Trang Thai'];
 
 (async () => {
-    const since = moment().startOf('day').subtract(400, 'days').toDate()
+    const since = moment().startOf('day').subtract(1, 'days').toDate()
 
     const util = moment().endOf('day').subtract(1, 'days').toDate()
     const a = await getData({since, limit: 1000, util})

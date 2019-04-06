@@ -1,1 +1,2 @@
-export {getData} from './order'
+export {processData} from './order'
+export {getVariantByIds} from './variant'

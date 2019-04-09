@@ -1,86 +1,157 @@
-import * as dotenv from 'dotenv'
 import axios from "axios";
-import moment from 'moment';
-import lodash from 'lodash';
-import path from "path";
+import moment from "moment";
+import lodash from "lodash";
+import { getVariantByIds } from "./variant";
 import * as xlsx from "node-xlsx";
-import fs from "fs";
-import {config} from "dotenv";
-import {getVariantByIds} from "./variant";
+import fs, { watchFile } from "fs";
+import path from "path";
+const ORDER_REPORT_HEADERS = [
+  "Mã đơn hàng",
+  "Ngày tạo",
+  "Ngày hoàn thành",
+  "SĐT khách hàng",
+  "Tên khách hàng",
+  "SKU",
+  "Tên sản phẩm",
+  "Số lượng",
+  "Đơn giá",
+  "Trạng thái"
+];
 
-
-const xlsxHeader = ['Phieu Xuat', 'Ngay', 'Ma Khach Hang', 'Ten Khach Hang', 'Ma Hang', 'Ten Hang', 'So Luong', 'Don Gia', 'Trang Thai'];
-
-const since = moment(new Date('04/01/2019').toISOString()).startOf('day').toDate()
-const util = moment().add(-1, 'days').endOf('day').toDate()
-
-console.log(util)
-
-const date = moment().subtract(1, 'days').format('DD-MM-YYYY').toString()
-
-// let dirWriteFile = `${__dirname}/exportData/Order-Report-` + date + `.xlsx`
-let dirWriteFile = path.resolve('src/exportData/', 'abc.xlsx')
-if (process.env.NODE_ENV === 'development') {
-    require('dotenv').config()
+if (process.env.NODE_ENV === "development") {
+  require("dotenv").config();
 }
 
 const request = axios.create({
-    baseURL: 'https://api.storelammoc.vn/orders',
-    timeout: 15e3,
-    headers: {'x-access-token': process.env.TOKEN_KEY},
+  baseURL: "https://api.storelammoc.vn/orders",
+  timeout: 15e3,
+  headers: { "x-access-token": process.env.TOKEN_KEY }
 });
 
-export async function getData(options: { since: Date, util: Date, limit?: number }) {
-    try {
-        const response = await request.get(`/customerAgencies/agencies/57e7af98b52ee4d36dc6c7c8`, {
-            params: {
-                apiVersion: 2,
-                ...options
-            }
-        })
-        return response.data
-    } catch (error) {
-        throw error
-    }
+export async function fetchOrders(options: {
+  since: Date;
+  until: Date;
+  limit?: number;
+}): Promise<{ hasMore: boolean; customerAgencyOrders: any[] }> {
+  try {
+    const response = await request.get(
+      `/customerAgencies/agencies/57e7af98b52ee4d36dc6c7c8`,
+      {
+        params: {
+          apiVersion: 2,
+          ...options
+        }
+      }
+    );
 
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 }
 
-export async function processData() {
-    const a = await getData({since, limit: 10000, util})
-    let rawData = a.customerAgencyOrders;
-    let data = []
+export const generateXLSXOrderData = async (orders: any[]) => {
+  const variantIds = lodash.flatten(
+    orders.map(order => {
+      return order.items.map((item: any) => item.variant.id);
+    })
+  );
 
-    let variantIds = []
-    for (let z in rawData) {
-        for (let y in rawData[z].items) {
-            let item = rawData[z].items[y];
-            variantIds.push(item.variant.id)
-        }
-    }
+  const variants = await getVariantByIds(variantIds);
+  const variantEntities = lodash.keyBy(variants, "_id");
+  let processedOrders = lodash.flatten(
+    orders.map(order => {
+      let orderCreatedAt = moment(new Date(order.createdAt)).format(
+        "DD-MM-YYYY HH:mm"
+      );
+      let orderUpdatedAt = moment(new Date(order.updatedAt)).format(
+        "DD-MM-YYYY HH:mm"
+      );
+      const orderDetails = [
+        `CO${order.id}`,
+        orderCreatedAt,
+        orderUpdatedAt,
+        order.customerInfo.phone,
+        order.customerInfo.name
+      ];
 
-    const variants = await getVariantByIds(variantIds);
-    const variantEntities = lodash.keyBy(variants, '_id')
+      const itemsDetails = (order.items || []).map((item: any) => {
+        const sku = lodash.get(
+          variantEntities,
+          `${lodash.get(item, "variant.id")}.sku`
+        );
+        const name =
+          lodash.get(item, "product.name") +
+          " (" +
+          lodash.get(item, "variant.name") +
+          ")";
+        return {
+          sku,
+          name,
+          quantity: item.quantity,
+          price: item.price
+        };
+      });
 
-    for (let i in rawData) {
-        let order = rawData[i]
-        for (let x in rawData[i].items) {
-            let itemData = []
-            let item = rawData[i].items[x];
-            let productLink = 'https://storelammoc.vn/products/' + item.product.id + '?variantId=' + item.variant.id
-            let itemName = item.product.name + ' ( ' + item.variant.name + ' )'
-            let orderCreatedAt = moment(new Date(order.createdAt)).format('DD-MM-YYYY HH:mm')
-            itemData.push('CO' + order._id, orderCreatedAt, order.customerInfo.phone, order.customerInfo.name, lodash.get(variantEntities, `${item.variant.id}.sku`), itemName, item.quantity, item.price, order.status,)
-            data.push(itemData)
-        }
-    }
+      return itemsDetails.map((item: any) => [
+        ...orderDetails,
+        item.sku,
+        item.name,
+        item.quantity,
+        item.price,
+        order.status
+      ]);
+    })
+  );
+  processedOrders.unshift(ORDER_REPORT_HEADERS);
 
-    data.unshift(xlsxHeader)
-    // console.log(JSON.stringify(rawData[0], null, '\t'))
+  return processedOrders;
+};
 
-    return data
-}
+export const fetchOrderDataRecursion = async ({
+  prevOrders = [],
+  since,
+  until,
+  limit = 20
+}: {
+  prevOrders?: any[];
+  since: Date;
+  until: Date;
+  limit?: number;
+}): Promise<{ completedOrders: any[] }> => {
+  const data = await fetchOrders({ since, limit, until });
 
+  const { hasMore = false, customerAgencyOrders = [] } = data || {};
 
-//check hasmore = true ? loop
-// check exist file in index ( when start up)
-//get orders, process orders => array data excell, exportxlsx
+  if (hasMore === true) {
+    const lastUntil = lodash.last(customerAgencyOrders).createdAt;
+
+    return await fetchOrderDataRecursion({
+      prevOrders: prevOrders.concat(customerAgencyOrders),
+      until: lastUntil,
+      since
+    });
+  }
+
+  const completedOrders = prevOrders.filter(prevOrder => {
+    if (
+      prevOrder.status === "COMPLETED" &&
+      moment(prevOrder.updatedAt).format("DD-MM-YYYY") ===
+        moment()
+          .add(-1, "days")
+          .format("DD-MM-YYYY")
+    )
+      return true;
+    else return false;
+  });
+
+  return {
+    completedOrders
+  };
+};
+
+export const filterOrderData = async ({
+  data: []
+}: {
+  data: [];
+}): Promise<any> => {};

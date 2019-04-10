@@ -7,11 +7,11 @@ if (process.env.NODE_ENV === 'development') {
   require('dotenv').config()
 }
 
-const EXPORTS_PATH  = process.env.EXPORTS_PATH  || 'exports'
+const EXPORTS_PATH = process.env.EXPORTS_PATH || 'exports'
 ;(async () => {
   console.log('\n\n\n')
-  if (!fs.existsSync(EXPORTS_PATH )) {
-    await fs.mkdirSync(EXPORTS_PATH , { recursive: false })
+  if (!fs.existsSync(EXPORTS_PATH)) {
+    await fs.mkdirSync(EXPORTS_PATH, { recursive: false })
   }
 
   const since = moment()

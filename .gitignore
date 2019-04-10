@@ -1,7 +1,6 @@
 node_modules/
 dist/
 .env
-server.js
 docker-compose.yml
 src/exportData/*
 exports/

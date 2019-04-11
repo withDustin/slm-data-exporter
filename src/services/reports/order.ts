@@ -3,6 +3,7 @@ import fs from 'fs'
 import { generateXLSXOrderData, fetchOrdersSequential } from '../order'
 import { createXlSXfile } from '../../utils/xlsx'
 import { sendMail } from '../mail'
+import { sendNotification } from '../../utils/slack-notification'
 const EXPORTS_PATH = process.env.EXPORTS_PATH || 'exports'
 
 export async function createXlSXfileAndSendMail() {
@@ -41,6 +42,13 @@ export async function createXlSXfileAndSendMail() {
     data,
     fileName: fileName,
     title: `Danh sách đơn hàng hoàn thành ngày ${orderDate.format('DD-MM-YYYY')}`,
+  }).catch((err) => {
+    sendNotification({
+      status: 'danger',
+      title: 'Daily Report Orders',
+      subtitle: 'There was a failure in createXLSXfile.',
+    })
+    throw err
   })
 
   console.log('Export XLSX Done !')
@@ -53,6 +61,13 @@ export async function createXlSXfileAndSendMail() {
     mailTo: MAIL_SEND_TO,
     filePath: `./${EXPORTS_PATH}/${fileName}.xlsx`,
     subject: MAIL_SUBJECT,
+  }).catch((err) => {
+    sendNotification({
+      status: 'danger',
+      title: 'Daily Report Orders',
+      subtitle: 'There was a failure in sendMail.',
+    })
+    throw err
   })
 }
 
@@ -60,7 +75,20 @@ export async function createXlSXfileAndSendMail() {
   try {
     await createXlSXfileAndSendMail()
   } catch (err) {
-    console.log(err)
-    // send mail, noti
+    //     sendNotification({
+    //       status: 'danger',
+    //       title: 'Daily Report Orders',
+    //       subtitle: 'There was a failure when create XLSX file and send mail.',
+    //     })
+  } finally {
+    const notifitionStatus = 'success'
+    const notifitionTitle = ':heavy_check_mark:  Daily Report Orders'
+    const notifitionSubtitle = ':100: Successed '
+    sendNotification({
+      status: notifitionStatus,
+      subtitle: notifitionSubtitle,
+      title: notifitionTitle,
+      code: 200,
+    })
   }
 })()

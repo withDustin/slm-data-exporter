@@ -2,8 +2,6 @@ import axios from 'axios'
 import moment from 'moment'
 import lodash from 'lodash'
 import { getVariantsByIds } from './variant'
-import { sendNotification } from '../utils/slack-notification'
-
 
 const ORDER_REPORT_COLUMNS = [
   'Mã đơn hàng',
@@ -39,65 +37,67 @@ export async function fetchOrders(options: {
 
     return response.data
   } catch (error) {
+    if (error.response && error.response.data) {
+      const err = new Error(error.response.data.message) as Error & { code: string }
+      err.code = error.response.data.code
+      throw err
+    }
 
-    const notifitionStatus = 'danger'
-    const notifitionTitle = ':no_entry: Orders Daily Report'
-    const notifitionSubtitle = 'There was a failure when fetch orders.'
-    sendNotification({
-      data: error,
-      status: notifitionStatus,
-      subtitle: notifitionSubtitle,
-      title: notifitionTitle,
-    })
+    throw error
   }
 }
 
 export const generateXLSXOrderData = async (orders: any[]) => {
-  const variantIds = lodash.flatten(
-    orders.map((order) => {
-      return order.items.map((item: any) => item.variant.id)
-    }),
-  )
+  try {
+    const variantIds = lodash.flatten(
+      orders.map((order) => {
+        return order.items.map((item: any) => item.variant.id)
+      }),
+    )
 
-  const variants = await getVariantsByIds(variantIds)
-  const variantEntities = lodash.keyBy(variants, '_id')
-  const processedOrders = lodash.flatten(
-    orders.map((order) => {
-      let orderCreatedAt = moment(new Date(order.createdAt)).format('DD-MM-YYYY HH:mm')
-      let orderUpdatedAt = moment(new Date(order.updatedAt)).format('DD-MM-YYYY HH:mm')
-      const orderDetails = [
-        `CO${order.id}`,
-        orderCreatedAt,
-        orderUpdatedAt,
-        order.customerInfo.phone,
-        order.customerInfo.name,
-      ]
+    const variants = await getVariantsByIds(variantIds)
+    const variantEntities = lodash.keyBy(variants, '_id')
+    const processedOrders = lodash.flatten(
+      orders.map((order) => {
+        let orderCreatedAt = moment(new Date(order.createdAt)).format('DD-MM-YYYY HH:mm')
+        let orderUpdatedAt = moment(new Date(order.updatedAt)).format('DD-MM-YYYY HH:mm')
+        const orderDetails = [
+          `CO${order.id}`,
+          orderCreatedAt,
+          orderUpdatedAt,
+          order.customerInfo.phone,
+          order.customerInfo.name,
+        ]
 
-      const itemsDetails = (order.items || []).map((item: any) => {
-        const sku = lodash.get(variantEntities, `${lodash.get(item, 'variant.id')}.sku`)
-        const name =
-          lodash.get(item, 'product.name') + ' (' + lodash.get(item, 'variant.name') + ')'
-        return {
-          sku,
-          name,
-          quantity: item.quantity,
-          price: item.price,
-        }
-      })
+        const itemsDetails = (order.items || []).map((item: any) => {
+          const sku = lodash.get(variantEntities, `${lodash.get(item, 'variant.id')}.sku`)
+          const name =
+            lodash.get(item, 'product.name') + ' (' + lodash.get(item, 'variant.name') + ')'
+          return {
+            sku,
+            name,
+            quantity: item.quantity,
+            price: item.price,
+          }
+        })
 
-      return itemsDetails.map((item: any) => [
-        ...orderDetails,
-        item.sku,
-        item.name,
-        item.quantity,
-        item.price,
-        order.status,
-      ])
-    }),
-  )
-  processedOrders.unshift(ORDER_REPORT_COLUMNS)
+        return itemsDetails.map((item: any) => [
+          ...orderDetails,
+          item.sku,
+          item.name,
+          item.quantity,
+          item.price,
+          order.status,
+        ])
+      }),
+    )
+    processedOrders.unshift(ORDER_REPORT_COLUMNS)
 
-  return processedOrders
+    return processedOrders
+  } catch (err) {
+    const error = new Error('generateXLSXOrderData failure')
+    throw error
+  }
 }
 
 export const fetchOrdersSequential = async ({
@@ -141,5 +141,3 @@ export const fetchOrdersSequential = async ({
     completedOrders,
   }
 }
-
-

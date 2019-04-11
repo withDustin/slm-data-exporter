@@ -1,5 +1,4 @@
 import nodemailer, { SentMessageInfo } from 'nodemailer'
-import { sendNotification } from '../utils/slack-notification'
 
 const MAX_TIME_RETRY_SEND_MAIL = process.env.MAX_TIME_RETRY_SEND_MAIL || 3
 export async function sendMail(
@@ -48,45 +47,24 @@ export async function sendMail(
 
     await transporter.verify()
 
-    return await transporter.sendMail(
-      {
-        from: options.mailFrom,
-        to: options.mailTo,
-        bcc: options.mailBcc,
-        cc: options.mailCc,
-        subject: options.subject,
-        attachments: [
-          {
-            filename: options.fileName,
-            path: options.filePath,
-          },
-        ],
-      },
-      function(err, info) {
-        const notifitionStatus = 'success'
-        const notifitionTitle = ':heavy_check_mark:     Daily Report Orders'
-        const notifitionSubtitle = ':100: Successed '
-        sendNotification({
-          status: notifitionStatus,
-          subtitle: notifitionSubtitle,
-          title: notifitionTitle,
-        })
-      },
-    )
+    return await transporter.sendMail({
+      from: options.mailFrom,
+      to: options.mailTo,
+      bcc: options.mailBcc,
+      cc: options.mailCc,
+      subject: options.subject,
+      attachments: [
+        {
+          filename: options.fileName,
+          path: options.filePath,
+        },
+      ],
+    })
   } catch (err) {
     console.log(retryCount)
     if (retryCount < MAX_TIME_RETRY_SEND_MAIL) {
       return await sendMail(options, retryCount + 1)
     }
-
-    const notifitionStatus = 'danger'
-    const notifitionTitle = ':no_entry: Orders Daily Report'
-    const notifitionSubtitle = 'There was a failure when send email.'
-    sendNotification({
-      data: err,
-      status: notifitionStatus,
-      subtitle: notifitionSubtitle,
-      title: notifitionTitle,
-    })
+    throw err
   }
 }

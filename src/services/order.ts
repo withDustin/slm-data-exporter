@@ -4,6 +4,7 @@ import lodash from 'lodash'
 import { getVariantsByIds } from './variant'
 import { sendNotification } from '../utils/slack-notification'
 
+
 const ORDER_REPORT_COLUMNS = [
   'Mã đơn hàng',
   'Ngày tạo',
@@ -38,6 +39,7 @@ export async function fetchOrders(options: {
 
     return response.data
   } catch (error) {
+
     const notifitionStatus = 'danger'
     const notifitionTitle = ':no_entry: Orders Daily Report'
     const notifitionSubtitle = 'There was a failure when fetch orders.'
@@ -47,7 +49,6 @@ export async function fetchOrders(options: {
       subtitle: notifitionSubtitle,
       title: notifitionTitle,
     })
-    throw error
   }
 }
 
@@ -140,3 +141,5 @@ export const fetchOrdersSequential = async ({
     completedOrders,
   }
 }
+
+

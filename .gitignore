@@ -1,6 +1,3 @@
 node_modules/
 dist/
 .env
-docker-compose.yml
-exports/
-orders.json

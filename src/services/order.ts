@@ -16,10 +16,6 @@ const ORDER_REPORT_COLUMNS = [
   'Trạng thái',
 ]
 
-if (process.env.NODE_ENV === 'development') {
-  require('dotenv').config()
-}
-
 const request = axios.create({
   baseURL: 'https://api.storelammoc.vn/orders',
   timeout: 15e3,

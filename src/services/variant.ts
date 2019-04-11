@@ -1,10 +1,6 @@
 import axios from 'axios'
 import lodash from 'lodash'
 
-if (process.env.NODE_ENV === 'development') {
-  require('dotenv').config()
-}
-
 const request = axios.create({
   baseURL: 'https://api.storelammoc.vn',
   timeout: 15e3,

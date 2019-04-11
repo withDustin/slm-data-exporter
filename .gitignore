@@ -2,6 +2,5 @@ node_modules/
 dist/
 .env
 docker-compose.yml
-src/exportData/*
 exports/
 orders.json

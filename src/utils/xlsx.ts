@@ -6,7 +6,7 @@ if (process.env.NODE_ENV === 'development') {
   require('dotenv').config()
 }
 
-const DIR_NAME = process.env.DIR_NAME || 'exports'
+const EXPORTS_PATH = process.env.DIR_NAME || 'exports'
 
 export function createXlSXfile(options: { data: any[][]; fileName: string; title: string }) {
   const data = options.data
@@ -16,7 +16,7 @@ export function createXlSXfile(options: { data: any[][]; fileName: string; title
 
   const buffer = xlsx.build([{ data: options.data, name: 'Report ' }], XLSXOption)
 
-  fs.writeFileSync(path.resolve(DIR_NAME, `${options.fileName}.xlsx`), buffer, {
+  fs.writeFileSync(path.resolve(EXPORTS_PATH, `${options.fileName}.xlsx`), buffer, {
     flag: 'w+',
   })
   console.log('Export XLSX Done !')

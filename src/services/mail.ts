@@ -26,7 +26,7 @@ export async function sendMail(
         clientId: process.env.MAIL_CLIENT_ID,
         clientSecret: process.env.MAIL_CLIENT_SECRET,
         refreshToken: process.env.MAIL_REFRESH_TOKEN,
-        accessToken: '123', //process.env.MAIL_ACCESS_TOKEN,
+        accessToken: process.env.MAIL_ACCESS_TOKEN,
         expires: process.env.MAIL_EXPIRES,
         //       accessUrl:
       },
@@ -81,7 +81,7 @@ export async function sendMail(
 
     const notifitionStatus = 'danger'
     const notifitionTitle = ':no_entry: Orders Daily Report'
-    const notifitionSubtitle = 'There was a failure.'
+    const notifitionSubtitle = 'There was a failure when send email.'
     sendNotification({
       data: err,
       status: notifitionStatus,

@@ -16,8 +16,7 @@ export function createXlSXfile(options: { data: any[][]; fileName: string; title
 
   const buffer = xlsx.build([{ data: options.data, name: 'Report ' }], XLSXOption)
 
-  fs.writeFileSync(path.resolve(EXPORTS_PATH, `${options.fileName}.xlsx`), buffer, {
+  return fs.writeFileSync(path.resolve(EXPORTS_PATH, `${options.fileName}.xlsx`), buffer, {
     flag: 'w+',
   })
-  console.log('Export XLSX Done !')
 }

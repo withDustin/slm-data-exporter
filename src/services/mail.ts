@@ -1,63 +1,92 @@
-import nodemailer from 'nodemailer'
+import nodemailer, { SentMessageInfo } from 'nodemailer'
+import { sendNotification } from '../utils/slack-notification'
 
-export async function sendMail(options: {
-  mailFrom: string
-  mailTo: string
-  mailCc?: any
-  mailBcc?: any
-  subject: string
-  fileName?: string
-  filePath?: string
-}) {
-  let transporterOptions: any = {
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-      type: 'OAuth2',
-      user: process.env.MAIL_USER,
-      clientId: process.env.MAIL_CLIENT_ID,
-      clientSecret: process.env.MAIL_CLIENT_SECRET,
-      refreshToken: process.env.MAIL_REFRESH_TOKEN,
-      accessToken: process.env.MAIL_ACCESS_TOKEN,
-      expires: process.env.MAIL_EXPIRES,
-      //       accessUrl:
-    },
-  }
-
-  if (process.env.NODE_ENV === 'development') {
-    const testAccount = await nodemailer.createTestAccount()
-    transporterOptions = {
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
+const MAX_TIME_RETRY_SEND_MAIL = process.env.MAX_TIME_RETRY_SEND_MAIL || 3
+export async function sendMail(
+  options: {
+    mailFrom: string
+    mailTo: string
+    mailCc?: any
+    mailBcc?: any
+    subject: string
+    fileName?: string
+    filePath?: string
+  },
+  retryCount = 0,
+): Promise<SentMessageInfo> {
+  try {
+    console.log('Start send mail to', options.mailTo)
+    let transporterOptions: any = {
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
+        type: 'OAuth2',
+        user: process.env.MAIL_USER,
+        clientId: process.env.MAIL_CLIENT_ID,
+        clientSecret: process.env.MAIL_CLIENT_SECRET,
+        refreshToken: process.env.MAIL_REFRESH_TOKEN,
+        accessToken: '123', //process.env.MAIL_ACCESS_TOKEN,
+        expires: process.env.MAIL_EXPIRES,
+        //       accessUrl:
       },
     }
-  }
-  const transporter = nodemailer.createTransport(transporterOptions)
 
-  transporter.verify(function(error, success) {
-    if (error) {
-      console.log(error)
-    } else {
-      console.log('Server is ready to take our messages')
+    if (process.env.NODE_ENV === 'development') {
+      const testAccount = await nodemailer.createTestAccount()
+      transporterOptions = {
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      }
     }
-  })
+    const transporter = nodemailer.createTransport(transporterOptions)
 
-  let mailMessage = await transporter.sendMail({
-    from: options.mailFrom,
-    to: options.mailTo,
-    bcc: options.mailBcc,
-    cc: options.mailCc,
-    subject: options.subject,
-    attachments: [
+    await transporter.verify()
+
+    return await transporter.sendMail(
       {
-        filename: options.fileName,
-        path: options.filePath,
+        from: options.mailFrom,
+        to: options.mailTo,
+        bcc: options.mailBcc,
+        cc: options.mailCc,
+        subject: options.subject,
+        attachments: [
+          {
+            filename: options.fileName,
+            path: options.filePath,
+          },
+        ],
       },
-    ],
-  })
+      function(err, info) {
+        const notifitionStatus = 'success'
+        const notifitionTitle = ':heavy_check_mark:     Daily Report Orders'
+        const notifitionSubtitle = ':100: Successed '
+        sendNotification({
+          status: notifitionStatus,
+          subtitle: notifitionSubtitle,
+          title: notifitionTitle,
+        })
+      },
+    )
+  } catch (err) {
+    console.log(retryCount)
+    if (retryCount < MAX_TIME_RETRY_SEND_MAIL) {
+      return await sendMail(options, retryCount + 1)
+    }
+
+    const notifitionStatus = 'danger'
+    const notifitionTitle = ':no_entry: Orders Daily Report'
+    const notifitionSubtitle = 'There was a failure.'
+    sendNotification({
+      data: err,
+      status: notifitionStatus,
+      subtitle: notifitionSubtitle,
+      title: notifitionTitle,
+    })
+  }
 }

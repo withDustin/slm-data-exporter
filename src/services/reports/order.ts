@@ -13,7 +13,6 @@ export async function createXlSXfileAndSendMail() {
   const MAIL_SUBJECT = process.env.MAIL_SUBJECT || 'Orders Daily Report'
   const DURATION_DAYS_GET_ORDERS = process.env.DURATION_DAYS_GET_ORDERS || 30
 
-  console.log('\n\n\n')
   if (!fs.existsSync(EXPORTS_PATH)) {
     await fs.mkdirSync(EXPORTS_PATH, { recursive: false })
   }
@@ -38,11 +37,13 @@ export async function createXlSXfileAndSendMail() {
   const orderDate = moment().add(-1, 'days')
   const fileName = `order-${orderDate.format('YYYY-MM-DD')}`
 
-  createXlSXfile({
+  await createXlSXfile({
     data,
     fileName: fileName,
     title: `Danh sách đơn hàng hoàn thành ngày ${orderDate.format('DD-MM-YYYY')}`,
   })
+
+  console.log('Export XLSX Done !')
 
   await sendMail({
     mailCc: MAIL_SEND_CC,
@@ -55,4 +56,11 @@ export async function createXlSXfileAndSendMail() {
   })
 }
 
-createXlSXfileAndSendMail()
+;(async () => {
+  try {
+    await createXlSXfileAndSendMail()
+  } catch (err) {
+    console.log(err)
+    // send mail, noti
+  }
+})()

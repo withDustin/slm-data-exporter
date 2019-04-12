@@ -8,7 +8,11 @@ if (process.env.NODE_ENV === 'development') {
 
 const EXPORTS_PATH = process.env.DIR_NAME || 'exports'
 
-export async function createXlSXfile(options: { data: any[][]; fileName: string; title: string }) {
+export const createXlSXfile = async (options: {
+  data: any[][]
+  fileName: string
+  title: string
+}) => {
   const data = options.data
   data.unshift([options.title.toUpperCase()], [])
   const range = { s: { c: 0, r: 0 }, e: { c: data[3].length - 1, r: 0 } }
@@ -16,7 +20,7 @@ export async function createXlSXfile(options: { data: any[][]; fileName: string;
 
   const buffer = xlsx.build([{ data: options.data, name: 'Report ' }], XLSXOption)
 
-  return await fs.writeFileSync(path.resolve(EXPORTS_PATH, `${options.fileName}.xlsx`), buffer, {
+  return fs.writeFileSync(path.resolve(EXPORTS_PATH, `${options.fileName}.xlsx`), buffer, {
     flag: 'w+',
   })
 }

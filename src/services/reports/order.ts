@@ -6,12 +6,12 @@ import { sendMail } from '../mail'
 import { sendNotification } from '../../utils/slack-notification'
 const EXPORTS_PATH = process.env.EXPORTS_PATH || 'exports'
 
-export async function createXlSXfileAndSendMail() {
+export const createXlSXfileAndSendMail = async () => {
   const MAIL_SEND_FROM = process.env.MAIL_SEND_FROM || ''
   const MAIL_SEND_TO = process.env.MAIL_SEND_TO || ''
   const MAIL_SEND_CC = process.env.MAIL_SEND_CC
   const MAIL_SEND_BCC = process.env.MAIL_SEND_BCC
-  const MAIL_SUBJECT = process.env.MAIL_SUBJECT || 'Orders Daily Report'
+  const MAIL_TITLE = process.env.MAIL_TITLE || 'Orders Daily Report'
   const DURATION_DAYS_GET_ORDERS = process.env.DURATION_DAYS_GET_ORDERS || 30
 
   if (!fs.existsSync(EXPORTS_PATH)) {
@@ -60,7 +60,7 @@ export async function createXlSXfileAndSendMail() {
     mailFrom: MAIL_SEND_FROM,
     mailTo: MAIL_SEND_TO,
     filePath: `./${EXPORTS_PATH}/${fileName}.xlsx`,
-    subject: MAIL_SUBJECT,
+    title: MAIL_TITLE,
   }).catch((err) => {
     sendNotification({
       status: 'danger',
@@ -70,16 +70,15 @@ export async function createXlSXfileAndSendMail() {
     throw err
   })
 }
-
 ;(async () => {
   try {
     await createXlSXfileAndSendMail()
   } catch (err) {
-    //     sendNotification({
-    //       status: 'danger',
-    //       title: 'Daily Report Orders',
-    //       subtitle: 'There was a failure when create XLSX file and send mail.',
-    //     })
+    sendNotification({
+      status: 'danger',
+      title: 'Daily Report Orders',
+      subtitle: 'There was a failure when create XLSX file and send mail.',
+    })
   } finally {
     const notifitionStatus = 'success'
     const notifitionTitle = ':heavy_check_mark:  Daily Report Orders'

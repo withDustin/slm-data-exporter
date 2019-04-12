@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
+    "test": "set NODE_ENV=development && jest --setupFiles dotenv/config",
     "tsc": "tsc",
-    "dev": "tsnd -r dotenv/config --respawn --transpileOnly  src/services/reports/order.ts",
+    "dev": "set NODE_ENV=development && tsnd -r dotenv/config --respawn --transpileOnly  src/services/reports/order.ts",
     "product": "tsnd -r dotenv/config --respawn --transpileOnly src/services/product.ts",
     "category": "tsnd -r dotenv/config --respawn --transpileOnly src/services/category.ts",
     "dev:production-order": "set NODE_ENV=production && tsnd -r dotenv/config  --respawn --transpileOnly src/services/reports/order.ts"

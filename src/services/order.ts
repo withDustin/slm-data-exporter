@@ -22,11 +22,11 @@ const request = axios.create({
   headers: { 'x-access-token': process.env.TOKEN_KEY },
 })
 
-export async function fetchOrders(options: {
+export const fetchOrders = async (options: {
   since: Date
   until: Date
   limit?: number
-}): Promise<{ hasMore: boolean; customerAgencyOrders: any[] }> {
+}): Promise<{ hasMore: boolean; customerAgencyOrders: any[] }> => {
   try {
     const response = await request.get(`/customerAgencies/agencies/57e7af98b52ee4d36dc6c7c8`, {
       params: {
@@ -59,8 +59,8 @@ export const generateXLSXOrderData = async (orders: any[]) => {
     const variantEntities = lodash.keyBy(variants, '_id')
     const processedOrders = lodash.flatten(
       orders.map((order) => {
-        let orderCreatedAt = moment(new Date(order.createdAt)).format('DD-MM-YYYY HH:mm')
-        let orderUpdatedAt = moment(new Date(order.updatedAt)).format('DD-MM-YYYY HH:mm')
+        const orderCreatedAt = moment(new Date(order.createdAt)).format('DD-MM-YYYY HH:mm')
+        const orderUpdatedAt = moment(new Date(order.updatedAt)).format('DD-MM-YYYY HH:mm')
         const orderDetails = [
           `CO${order.id}`,
           orderCreatedAt,

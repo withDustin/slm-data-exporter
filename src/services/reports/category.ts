@@ -65,7 +65,7 @@ export const createCategoriesXlSXfileAndSendMail = async () => {
     mailFrom: MAIL_CATE_SEND_FROM,
     mailTo: MAIL_CATE_SEND_TO,
     filePath: `./${EXPORTS_PATH}/categories-${REPORT_DATE}.xlsx`,
-    subject: MAIL_CATE_SUBJECT,
+    title: MAIL_CATE_SUBJECT,
   }).catch((err) => {
     sendNotification({
       status: 'danger',

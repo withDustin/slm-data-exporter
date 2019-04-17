@@ -17,11 +17,11 @@ const PRODUCTS_REPORT_COLUMNS = [
   'Khối lượng',
 ]
 
-export async function fetchProducts(options: {
+export const fetchProducts = async (options: {
   page?: number
   perPage?: number
   categoryId?: string
-}): Promise<{ products: any[]; pages: number }> {
+}): Promise<{ products: any[]; pages: number }> => {
   try {
     const response = await request.get(`/v2/products`, {
       params: {

@@ -1,21 +1,21 @@
 import nodemailer, { SentMessageInfo } from 'nodemailer'
 
 const MAX_TIME_RETRY_SEND_MAIL = process.env.MAX_TIME_RETRY_SEND_MAIL || 3
-export async function sendMail(
+export const sendMail = async (
   options: {
     mailFrom: string
     mailTo: string
     mailCc?: any
     mailBcc?: any
-    subject: string
+    title: string
     fileName?: string
     filePath?: string
   },
   retryCount = 0,
-): Promise<SentMessageInfo> {
+): Promise<SentMessageInfo> => {
   try {
     console.log('Start send mail to', options.mailTo)
-    let transporterOptions: any = {
+    const transporterOptions: any = {
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
@@ -30,19 +30,6 @@ export async function sendMail(
         //       accessUrl:
       },
     }
-
-    if (process.env.NODE_ENV === 'development') {
-      const testAccount = await nodemailer.createTestAccount()
-      transporterOptions = {
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      }
-    }
     const transporter = nodemailer.createTransport(transporterOptions)
 
     await transporter.verify()
@@ -52,7 +39,7 @@ export async function sendMail(
       to: options.mailTo,
       bcc: options.mailBcc,
       cc: options.mailCc,
-      subject: options.subject,
+      subject: options.title,
       attachments: [
         {
           filename: options.fileName,

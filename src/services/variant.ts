@@ -7,7 +7,7 @@ const request = axios.create({
   headers: { 'x-access-token': process.env.TOKEN_KEY },
 })
 
-export async function getVariantsByIds(ids: string[]) {
+export const getVariantsByIds = async (ids: string[]) => {
   try {
     let variants = []
     const length = ids.length
@@ -24,11 +24,8 @@ export async function getVariantsByIds(ids: string[]) {
       variants.push(response.data)
       loopIdx++
     }
-    // console.log(variants)
     return lodash.flatten(variants)
   } catch (e) {
     throw e
   }
 }
-
-

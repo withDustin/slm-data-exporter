@@ -48,7 +48,7 @@ const createProductXlSXfileAndSendMail = async () => {
     mailFrom: MAIL_PRODUCT_SEND_FROM,
     mailTo: MAIL_PRODUCT_SEND_TO,
     filePath: `./${EXPORTS_PATH}/products-${REPORT_DATE}.xlsx`,
-    subject: MAIL_PRODUCT_SUBJECT,
+    title: MAIL_PRODUCT_SUBJECT,
   }).catch((err) => {
     sendNotification({
       status: 'danger',

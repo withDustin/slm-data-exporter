@@ -1,82 +1,100 @@
-version: 2.1
+version: 2
 jobs:
-  test:
+  build:
     docker:
       - image: circleci/node:lts
+    working_directory: ~/app/reporter
     steps:
       - checkout
       - restore_cache:
           keys:
-            - yarn-lock-{{ checksum "yarn.lock" }}
+            - v1-dependencies-{{ checksum "package.json" }}
+            - v1-dependencies-
       - run:
           name: Install dependencies
           command: yarn install && ls -l node_modules
-      - run:
-        name: Run tests
-        command: |
-          yarn test
-           yarn category
-      # - run:
-      # name: Run tests
-      # command: |
-      #   yarn test
-      #   yarn build
+      - run: pwd && ls -la
       - save_cache:
-          key: yarn-lock-{{ checksum "yarn.lock" }}
           paths:
             - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+      - persist_to_workspace:
+          root: ~/app
+          paths:
+            - reporter
+  report-order:
+    docker:
+      - image: circleci/node:lts
+    working_directory: ~/app/reporter
+    steps:
+      - attach_workspace:
+          at: ~/app
+      - run: pwd && ls -la
+      - run:
+          name: Fetch ORDER data, create xlsx and send mail
+          command: yarn order:ci
 
-  build_docker_images:
+  report-product:
     docker:
       - image: circleci/node:lts
+    working_directory: ~/app/reporter
     steps:
-      - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - attach_workspace:
+          at: ~/app
+      - run: pwd && ls -la
       - run:
-          name: Build docker image
-          command: docker build -t $DOCKERHUB_REPO:$CIRCLE_SHA1 -t $DOCKERHUB_REPO:master -f Dockerfile .
-      - run:
-          name: Publish Docker Image to Docker Hub
-          command: |
-            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USER" --password-stdin
-            docker push $DOCKERHUB_REPO:$CIRCLE_SHA1
-            docker push $DOCKERHUB_REPO:master
-  push_release_image_tags:
+          name: Fetch PRODUCT data, create xlsx and send mail
+          command: yarn product:ci
+
+  report-category:
     docker:
       - image: circleci/node:lts
+    working_directory: ~/app/reporter
     steps:
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - run: echo 'export VERSION_TAG=$(echo $CIRCLE_TAG | tr -d v)' >> $BASH_ENV
+      - attach_workspace:
+          at: ~/app
+      - run: pwd && ls -la
       - run:
-          name: Tag & publish docker image
-          command: |
-            echo $VERSION_TAG
-            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USER" --password-stdin
-            docker pull $DOCKERHUB_REPO:$CIRCLE_SHA1
-            docker tag $DOCKERHUB_REPO:$CIRCLE_SHA1 $DOCKERHUB_REPO:latest
-            docker tag $DOCKERHUB_REPO:$CIRCLE_SHA1 $DOCKERHUB_REPO:$VERSION_TAG
-            docker push $DOCKERHUB_REPO:latest
-            docker push $DOCKERHUB_REPO:$VERSION_TAG
+          name: Fetch CATEGORY data, create xlsx and send mail
+          command: yarn category:ci
+
 workflows:
-  version: 2.1
-
-  test_and_build_docker_image:
+  version: 2
+  Orders Report:
+    triggers:
+      - schedule:
+          cron: '0 2 * * *'
+          filters:
+            branches:
+              only: master
     jobs:
-      - test
-      - build_docker_images:
+      - build
+      - report-order:
           requires:
-            - test
+            - build
+
+  Product Report:
+    triggers:
+      - schedule:
+          cron: '0 2 * * 1'
           filters:
             branches:
-              only:
-                - report-product
-      - push_release_image_tags:
+              only: master
+    jobs:
+      - build
+      - report-product:
           requires:
-            - build_docker_images
+            - build
+
+  Category Report:
+    triggers:
+      - schedule:
+          cron: '0 2 * * 1'
           filters:
-            tags:
-              only: /^v.*/
             branches:
-              ignore: /.*/
+              only: master
+    jobs:
+      - build
+      - report-category:
+          requires:
+            - build

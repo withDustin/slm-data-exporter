@@ -66,7 +66,7 @@ export async function sendMail(
       return await sendMail(options, retryCount + 1)
     }
     throw err
-    // } finally {
-    //   console.log('Send Mail Done !')
+  } finally {
+    console.log('Send Mail Done !')
   }
 }

@@ -1,10 +1,11 @@
 import { fetchProductsSequential } from '../product'
 import { createXlSXfile } from '../../utils/xlsx'
-import moment = require('moment')
+import moment from 'moment-timezone'
 import fs from 'fs'
 import { sendNotification } from '../../utils/slack-notification'
 import { sendMail } from '../mail'
 
+moment.tz.setDefault('Asia/Ho_Chi_Minh')
 const EXPORTS_PATH = process.env.EXPORTS_PATH || 'exports'
 const REPORT_DATE = moment()
   .format('YYYY-MM-DD')
@@ -15,7 +16,7 @@ const createProductXlSXfileAndSendMail = async () => {
   const MAIL_PRODUCT_SEND_TO = process.env.MAIL_SEND_TO || ''
   const MAIL_PRODUCT_SEND_CC = process.env.MAIL_SEND_CC
   const MAIL_PRODUCT_SEND_BCC = process.env.MAIL_SEND_BCC
-  const MAIL_PRODUCT_SUBJECT = process.env.MAIL_SUBJECT || 'Product list periodically'
+  const MAIL_PRODUCT_SUBJECT = process.env.MAIL_SUBJECT || 'Update Product List'
 
   if (!fs.existsSync(EXPORTS_PATH)) {
     await fs.mkdirSync(EXPORTS_PATH, { recursive: false })
@@ -31,7 +32,7 @@ const createProductXlSXfileAndSendMail = async () => {
     .catch((err) => {
       sendNotification({
         status: 'danger',
-        title: 'Product List Periodically',
+        title: 'Update Product List',
         subtitle: 'There was a failure in createXLSXFile.',
       })
       throw err

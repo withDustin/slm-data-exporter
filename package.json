@@ -7,18 +7,23 @@
     "test": "jest",
     "tsc": "tsc",
     "dev": "tsnd -r dotenv/config --respawn --transpileOnly  src/services/reports/order.ts",
-    "product": "tsnd -r dotenv/config --respawn --transpileOnly src/services/reports/product.ts",
-    "category": "tsnd -r dotenv/config --respawn --transpileOnly src/services/reports/category.ts",
-    "dev:production-order": "set NODE_ENV=production && tsnd -r dotenv/config  --respawn --transpileOnly src/services/reports/order.ts"
+    "product": "set NODE_ENV=production && tsnd -r dotenv/config --respawn --transpileOnly src/services/reports/product.ts",
+    "category": "set NODE_ENV=production && tsnd -r dotenv/config --respawn --transpileOnly src/services/reports/category.ts",
+    "order": "set NODE_ENV=production && tsnd -r dotenv/config  --respawn --transpileOnly src/services/reports/order.ts",
+    "order:ci": "set NODE_ENV=production && ts-node -r dotenv/config  --transpile-only src/services/reports/order.ts",
+    "product:ci": "set NODE_ENV=production && ts-node -r dotenv/config  --transpile-only src/services/reports/product.ts",
+    "category:ci": "set NODE_ENV=production && ts-node -r dotenv/config  --transpile-only src/services/reports/category.ts"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/moment-timezone": "^0.5.12",
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "graphql": "^14.2.1",
     "lodash": "^4.17.11",
     "moment": "^2.24.0",
+    "moment-timezone": "^0.5.23",
     "node-xlsx": "^0.14.1",
     "nodemailer": "^6.1.0",
     "object-assign": "^4.1.1"

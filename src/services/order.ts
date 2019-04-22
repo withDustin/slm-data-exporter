@@ -22,11 +22,11 @@ const request = axios.create({
   headers: { 'x-access-token': process.env.TOKEN_KEY },
 })
 
-export async function fetchOrders(options: {
+export const fetchOrders = async (options: {
   since: Date
   until: Date
   limit?: number
-}): Promise<{ hasMore: boolean; customerAgencyOrders: any[] }> {
+}): Promise<{ hasMore: boolean; customerAgencyOrders: any[] }> => {
   try {
     const response = await request.get(`/customerAgencies/agencies/57e7af98b52ee4d36dc6c7c8`, {
       params: {
@@ -37,56 +37,67 @@ export async function fetchOrders(options: {
 
     return response.data
   } catch (error) {
+    if (error.response && error.response.data) {
+      const err = new Error(error.response.data.message) as Error & { code: string }
+      err.code = error.response.data.code
+      throw err
+    }
+
     throw error
   }
 }
 
 export const generateXLSXOrderData = async (orders: any[]) => {
-  const variantIds = lodash.flatten(
-    orders.map((order) => {
-      return order.items.map((item: any) => item.variant.id)
-    }),
-  )
+  try {
+    const variantIds = lodash.flatten(
+      orders.map((order) => {
+        return order.items.map((item: any) => item.variant.id)
+      }),
+    )
 
-  const variants = await getVariantsByIds(variantIds)
-  const variantEntities = lodash.keyBy(variants, '_id')
-  const processedOrders = lodash.flatten(
-    orders.map((order) => {
-      let orderCreatedAt = moment(new Date(order.createdAt)).format('DD-MM-YYYY HH:mm')
-      let orderUpdatedAt = moment(new Date(order.updatedAt)).format('DD-MM-YYYY HH:mm')
-      const orderDetails = [
-        `CO${order.id}`,
-        orderCreatedAt,
-        orderUpdatedAt,
-        order.customerInfo.phone,
-        order.customerInfo.name,
-      ]
+    const variants = await getVariantsByIds(variantIds)
+    const variantEntities = lodash.keyBy(variants, '_id')
+    const processedOrders = lodash.flatten(
+      orders.map((order) => {
+        const orderCreatedAt = moment(new Date(order.createdAt)).format('DD-MM-YYYY HH:mm')
+        const orderUpdatedAt = moment(new Date(order.updatedAt)).format('DD-MM-YYYY HH:mm')
+        const orderDetails = [
+          `CO${order.id}`,
+          orderCreatedAt,
+          orderUpdatedAt,
+          order.customerInfo.phone,
+          order.customerInfo.name,
+        ]
 
-      const itemsDetails = (order.items || []).map((item: any) => {
-        const sku = lodash.get(variantEntities, `${lodash.get(item, 'variant.id')}.sku`)
-        const name =
-          lodash.get(item, 'product.name') + ' (' + lodash.get(item, 'variant.name') + ')'
-        return {
-          sku,
-          name,
-          quantity: item.quantity,
-          price: item.price,
-        }
-      })
+        const itemsDetails = (order.items || []).map((item: any) => {
+          const sku = lodash.get(variantEntities, `${lodash.get(item, 'variant.id')}.sku`)
+          const name =
+            lodash.get(item, 'product.name') + ' (' + lodash.get(item, 'variant.name') + ')'
+          return {
+            sku,
+            name,
+            quantity: item.quantity,
+            price: item.price,
+          }
+        })
 
-      return itemsDetails.map((item: any) => [
-        ...orderDetails,
-        item.sku,
-        item.name,
-        item.quantity,
-        item.price,
-        order.status,
-      ])
-    }),
-  )
-  processedOrders.unshift(ORDER_REPORT_COLUMNS)
+        return itemsDetails.map((item: any) => [
+          ...orderDetails,
+          item.sku,
+          item.name,
+          item.quantity,
+          item.price,
+          order.status,
+        ])
+      }),
+    )
+    processedOrders.unshift(ORDER_REPORT_COLUMNS)
 
-  return processedOrders
+    return processedOrders
+  } catch (err) {
+    const error = new Error('generateXLSXOrderData failure')
+    throw error
+  }
 }
 
 export const fetchOrdersSequential = async ({
@@ -130,5 +141,3 @@ export const fetchOrdersSequential = async ({
     completedOrders,
   }
 }
-
-export const filterOrderData = async ({ data: [] }: { data: [] }): Promise<any> => {}

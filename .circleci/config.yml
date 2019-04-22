@@ -1,38 +1,100 @@
-version: 2 # use CircleCI 2.0
-jobs: # a collection of steps
-  build: # runs not using Workflows must have a `build` job as entry point
-    working_directory: ~/mern-starter # directory where steps will run
-    docker: # run the steps with Docker
-      - image: circleci/node:4.8.2 # ...with this image as the primary container; this is where all `steps` will run
-      - image: mongo:3.4.4 # and this image as the secondary service container
-    steps: # a collection of executable commands
-      - checkout # special step to check out source code to working directory
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/node:lts
+    working_directory: ~/app/reporter
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package.json" }}
+            - v1-dependencies-
       - run:
-          name: update-npm
-          command: 'sudo npm install -g npm@latest'
-      - restore_cache: # special step to restore the dependency cache
-          # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
-          key: dependency-cache-{{ checksum "package.json" }}
-      - run:
-          name: install-npm-wee
-          command: npm install
-      - save_cache: # special step to save the dependency cache
-          key: dependency-cache-{{ checksum "package.json" }}
+          name: Install dependencies
+          command: yarn install && ls -l node_modules
+      - run: pwd && ls -la
+      - save_cache:
           paths:
-            - ./node_modules
-      - run: # run tests
-          name: test
-          command: npm test
-      - run: # run coverage report
-          name: code-coverage
-          command: './node_modules/.bin/nyc report --reporter=text-lcov'
-      - store_artifacts: # special step to save test results as as artifact
-          # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/ 
-          path: test-results.xml
-          prefix: tests
-      - store_artifacts: # for display in Artifacts: https://circleci.com/docs/2.0/artifacts/ 
-          path: coverage
-          prefix: coverage
-      - store_test_results: # for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
-          path: test-results.xml
-      # See https://circleci.com/docs/2.0/deployment-integrations/ for deploy examples
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+      - persist_to_workspace:
+          root: ~/app
+          paths:
+            - reporter
+  report-order:
+    docker:
+      - image: circleci/node:lts
+    working_directory: ~/app/reporter
+    steps:
+      - attach_workspace:
+          at: ~/app
+      - run: pwd && ls -la
+      - run:
+          name: Fetch ORDER data, create xlsx and send mail
+          command: yarn order:ci
+
+  report-product:
+    docker:
+      - image: circleci/node:lts
+    working_directory: ~/app/reporter
+    steps:
+      - attach_workspace:
+          at: ~/app
+      - run: pwd && ls -la
+      - run:
+          name: Fetch PRODUCT data, create xlsx and send mail
+          command: yarn product:ci
+
+  report-category:
+    docker:
+      - image: circleci/node:lts
+    working_directory: ~/app/reporter
+    steps:
+      - attach_workspace:
+          at: ~/app
+      - run: pwd && ls -la
+      - run:
+          name: Fetch CATEGORY data, create xlsx and send mail
+          command: yarn category:ci
+
+workflows:
+  version: 2
+  Orders Report:
+    triggers:
+      - schedule:
+          cron: '0 2 * * *'
+          filters:
+            branches:
+              only: master
+    jobs:
+      - build
+      - report-order:
+          requires:
+            - build
+
+  Product Report:
+    triggers:
+      - schedule:
+          cron: '0 2 * * 1'
+          filters:
+            branches:
+              only: master
+    jobs:
+      - build
+      - report-product:
+          requires:
+            - build
+
+  Category Report:
+    triggers:
+      - schedule:
+          cron: '0 2 * * 1'
+          filters:
+            branches:
+              only: master
+    jobs:
+      - build
+      - report-category:
+          requires:
+            - build
